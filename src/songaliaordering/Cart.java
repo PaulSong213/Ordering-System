@@ -12,9 +12,13 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Image;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -23,25 +27,32 @@ import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
-import static songaliaordering.SongaliaOrdering.BASE_COLOR;
 
 /**
  *
  * @author Songali A
  */
-public final class Cart extends JPanel{
+public class Cart extends JPanel{
     final int PANEL_WIDTH = 300;
     final int PANEL_HEIGHT = 500;
     int cardVisibleIndex = 0;
-    double totalCost = 99;
+    double totalCost = 0;
     Color infoColor = new Color(148, 83, 13);
-    public Cart() {
+    Color BASE_COLOR;
+    public JPanel cartList = cartsList();;
+    JLabel totalLabel;
+    public HashMap<Integer, Map> cartItems = new HashMap<>();
+    
+    public Cart(Color BASE_COLOR) {
+        this.BASE_COLOR = BASE_COLOR;
         this.setBackground(BASE_COLOR);
         this.setLayout(new BorderLayout());
         this.add(mainPanel(),BorderLayout.CENTER);
+//        this.setMinimumSize(new Dimension(PANEL_WIDTH, PANEL_HEIGHT));
     }
     
     JPanel mainPanel(){
@@ -50,7 +61,7 @@ public final class Cart extends JPanel{
         int padding = 20;
         p.setBorder(new EmptyBorder(padding,padding,padding,padding));
         p.setBackground(receiptBG);
-        p.add(cartsList(),BorderLayout.CENTER);
+        p.add(cartList,BorderLayout.CENTER);
         p.add(calculations(),BorderLayout.SOUTH);
         return p;
     }
@@ -70,13 +81,53 @@ public final class Cart extends JPanel{
         
         p.add(cartTitle);
         
-        p.add(cartItem("Milk", "milk.jpg", 99,5));
-        p.add(cartItem("Milk", "burger.jpeg", 99,5));
-        
         return p;
     }
     
-    JPanel cartItem(String name,String imageName,int price,int quantity){
+    void addcartItem(String name, String imageFile, int totalPrice, int quantity, String category){
+        int newId = this.cartItems.size() + 2;
+        System.out.println(newId);
+        this.cartItems.put(newId, Map.of(
+                "name" , name,
+                "imageFile", imageFile,
+                "totalPrice", totalPrice,
+                "quantity", quantity,
+                "category", category
+            ));
+        
+        this.cartList.add(cartItem(name,imageFile,totalPrice,quantity,category,newId));
+        this.totalCost += totalPrice;
+        repaintTotalLabel();
+        this.cartList.repaint();
+        System.out.println(this.cartItems);
+    }
+    
+    void clearCart(){
+        this.cartItems.clear();
+        this.cartList.removeAll();
+        this.totalCost = 0;
+        repaintTotalLabel();
+        JPanel cartTitle = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        cartTitle.setBackground(null);
+        JLabel title = new JLabel("CART");
+        cartTitle.add(title);
+        title.setForeground(infoColor);
+        title.setFont(new Font("Arial", Font.BOLD, 24));
+        this.cartList.add(cartTitle);
+        this.cartList.repaint();
+
+    }
+    
+    void removeCartItem(int id){
+        int toRemovePrice = Integer.valueOf(String.valueOf(this.cartItems.get(id).get("totalPrice")));
+        this.totalCost -= toRemovePrice;
+        repaintTotalLabel();
+        this.cartItems.remove(id);
+        System.out.println(this.cartItems);
+
+    }
+    
+    JPanel cartItem(String name,String imageName,int price,int quantity,String category,int id){
         
         JPanel p = new JPanel();
         p.setBackground(null);
@@ -90,7 +141,7 @@ public final class Cart extends JPanel{
         JLabel labelName = new JLabel(name);
         labelName.setFont(new Font("Arial", Font.BOLD, 16));
         
-        JLabel categoryName = new JLabel("Large");
+        JLabel categoryName = new JLabel(category + " | " + quantity + " order(s)" );
         categoryName.setForeground(infoColor);
         categoryName.setFont(new Font("Arial", Font.BOLD, 10));
         
@@ -118,15 +169,22 @@ public final class Cart extends JPanel{
         JLabel priceLabel = new JLabel("₱" + String.valueOf(price) );
         priceLabel.setFont(new Font("Arial", Font.BOLD, 18));
         
-        JLabel quantityLabel = new JLabel(quantity + " x");
-        quantityLabel.setBackground(Color.green);
-        quantityLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        quantityLabel.setForeground(infoColor);
-        
         JButton delButton = new JButton();
         delButton.setBackground(new Color(245, 127, 135));
-        
+        delButton.setText(String.valueOf(id));
         delButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        delButton.addActionListener(new ActionListener() { 
+            public void actionPerformed(ActionEvent e) { 
+                String warningMessage = "Are you sure you want to delete " + name + " from cart?";
+                int dialogResult = JOptionPane.showConfirmDialog (null, warningMessage ,"Warning",1);
+                if(dialogResult == JOptionPane.YES_OPTION){
+                    removeCartItem(id);
+                    cartList.remove(p);
+                    cartList.repaint();
+                }
+                
+            } 
+        });
         try {
             BufferedImage delPic = ImageIO.read(new File("src/icons/delete.png"));
             Image resizedDelPic = delPic.getScaledInstance(20, 20, Image.SCALE_DEFAULT);
@@ -137,7 +195,7 @@ public final class Cart extends JPanel{
         
         itemPrice.add(priceLabel,BorderLayout.CENTER);
         itemPrice.add(delButton,BorderLayout.EAST);
-        itemPrice.add(quantityLabel,BorderLayout.WEST);
+       
         p.add(itemImage,BorderLayout.WEST);
         p.add(itemName,BorderLayout.CENTER);
         p.add(itemPrice,BorderLayout.EAST);
@@ -150,26 +208,38 @@ public final class Cart extends JPanel{
         p.setLayout(new BoxLayout(p, BoxLayout.PAGE_AXIS));
         p.setBackground(null);
         
-        JLabel total = new JLabel("Total: ₱" + this.totalCost,SwingConstants.RIGHT);
-        total.setFont(new Font("Arial", Font.BOLD, 20));
-        total.setForeground(new Color(17, 163, 20));
+        totalLabel = new JLabel("Total: ₱" + this.totalCost,SwingConstants.RIGHT);
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        totalLabel.setForeground(new Color(17, 163, 20));
 
         JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         totalPanel.setBackground(null);
-        totalPanel.add(total);
+        totalPanel.add(totalLabel);
         
         JPanel confirmPanel = new JPanel(new BorderLayout());
         confirmPanel.setBackground(null);
         JButton confirmPurchase = new JButton("Confirm Purchase");
+        
         confirmPurchase.setBorder(BorderFactory.createEmptyBorder(15,15,15,15));
         confirmPurchase.setCursor(new Cursor(Cursor.HAND_CURSOR));
         confirmPanel.add(confirmPurchase,BorderLayout.CENTER);
         confirmPurchase.setBackground(BASE_COLOR);
-        
+        confirmPurchase.addActionListener (new ActionListener () {
+            public void actionPerformed(ActionEvent e) {
+                if(cartItems.size() > 0){
+                    JOptionPane.showMessageDialog(null, "Transaction successful. Please pay : ₱" + totalCost, "Purchase Confirmation", JOptionPane.PLAIN_MESSAGE, null);
+                    clearCart();
+                }
+            }
+        });
         
         p.add(totalPanel);
         p.add(confirmPanel);
         return p;
     }
     
+    void repaintTotalLabel(){
+        this.totalLabel.setText("Total: ₱" + this.totalCost);
+    }    
+
 }

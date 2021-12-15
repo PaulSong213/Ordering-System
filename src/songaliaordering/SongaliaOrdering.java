@@ -17,10 +17,11 @@ public class SongaliaOrdering {
     /**
      * @param args the command line arguments
      */
-    ItemList itemList;
-    Cart receipt;
+    ItemList itemList = new ItemList();;
+    MainFrame frame = new MainFrame(BASE_COLOR);
     static Color BASE_COLOR = new Color(248,218,146);
-    
+    static Cart cart  = new Cart(BASE_COLOR);
+
      public static void main(String[] args) {
         // TODO code application logic here
         SongaliaOrdering gui = new SongaliaOrdering();
@@ -28,13 +29,15 @@ public class SongaliaOrdering {
     }
     
     public void initApp(){
-        MainFrame frame = new MainFrame(BASE_COLOR);
         frame.setLayout(new BorderLayout());
-        itemList = new ItemList();
-        receipt = new Cart();
         frame.add(itemList,BorderLayout.CENTER);
-        frame.add(receipt,BorderLayout.EAST);
+        frame.add(cart,BorderLayout.EAST);
         frame.setVisible(true);
+
+    }
+    
+    void addcartItem(String name, String imageFile, int totalPrice, int quantity, String category){
+        SongaliaOrdering.cart.addcartItem(name, imageFile, totalPrice, quantity, category);
     }
     
 }

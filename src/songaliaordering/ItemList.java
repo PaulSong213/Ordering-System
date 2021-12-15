@@ -17,7 +17,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,28 +28,69 @@ import javax.swing.JPanel;
 import static songaliaordering.SongaliaOrdering.BASE_COLOR;
 
 
-public final class ItemList extends JPanel{
-    LinkedList<Map> items = new LinkedList<>();
+public class ItemList extends JPanel {
+    
+    HashMap<Integer, Map> items = new HashMap<>();
     public ItemList() {
         this.setBackground(BASE_COLOR);
-        addItems();
+        
+        addItems("Milk","milk.jpg",Map.of(
+                "Large", 50,
+                "Regular",40,
+                "Small",30
+            ));
+        addItems("Burger","burger.jpeg",Map.of(
+                "Large", 30,
+                "Regular",20,
+                "Small",10
+            ));
+        addItems("Milktea","milktea.jpeg",Map.of(
+                "Large", 99,
+                "Regular",88,
+                "Small",77
+            ));
+        
+        showItems();
     }
     
-    void addItems(){
+    void addItems(String name,String imageName, Map<String,Integer> categories){
+        this.items.put(this.items.size() + 1, Map.of(
+            "name", name,
+            "imageFile", imageName,
+            "categories", categories
+        ));
+    }
+    
+    void showItems(){
         FlowLayout flow = new FlowLayout(0,5,5);
         this.setLayout(flow);
-        this.add(item("Milk","milk.jpg",199));
-        this.add(item("Burger","burger.jpeg",99));
-        this.add(item("Milktea","milktea.jpeg",60));
+        
+        this.items.keySet().forEach(i -> {
+            Map item = this.items.get(i);
+            String name = String.valueOf(item.get("name"));
+            String imageFile = String.valueOf(item.get("imageFile"));
+            Map categories = (Map)item.get("categories");
+            
+            this.add(item(name,imageFile,categories));
+        });
+        
     }
     
     
-    JPanel item(String name,String imageName,int price){
+    JPanel item(String name,String imageName,Map categories){
         int width = 200;
         int height = 200;
         JPanel b = new JPanel();
         Color itemBg = new Color(227, 196, 120);
         
+        
+        HashMap<String, Integer> currentCategories = new HashMap<>();
+        categories.keySet().forEach(i -> {
+            String categName = String.valueOf(i);
+            int categPrice = Integer.valueOf(String.valueOf(categories.get(i)));
+            currentCategories.put(categName,categPrice);
+        });
+        int displayPrice = currentCategories.get("Regular");
         
         b.setBackground(itemBg);
         b.setPreferredSize(new Dimension(width, height));
@@ -78,7 +119,7 @@ public final class ItemList extends JPanel{
         itemName.add(new JLabel(name));
         
         JPanel itemPrice = new JPanel();
-        itemPrice.add(new JLabel("₱" + String.valueOf(price)));
+        itemPrice.add(new JLabel("₱" + String.valueOf(displayPrice)));
         itemPrice.setLayout(new FlowLayout(FlowLayout.RIGHT));
         itemPrice.setBackground(null);
         
@@ -109,11 +150,15 @@ public final class ItemList extends JPanel{
             public void mouseClicked(MouseEvent e) {
                 ItemOptions options = new ItemOptions();
                 options.setTitle("Select Options for " + name);
-                options.show(name,imageName,price);
+                options.show(name,imageName,currentCategories);
+//                cart.addCartItem();
+//                SongaliaOrdering cls = new SongaliaOrdering();
             }
         });
         
         return b;
     }
+   
     
 }
+

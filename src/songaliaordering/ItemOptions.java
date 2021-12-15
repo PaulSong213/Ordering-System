@@ -3,7 +3,6 @@ package songaliaordering;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
@@ -14,8 +13,7 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -23,24 +21,31 @@ import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-
 import javax.swing.JComponent;
+import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRootPane;
 import javax.swing.JSpinner;
-import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.text.DefaultFormatter;
 import static songaliaordering.SongaliaOrdering.BASE_COLOR;
+//import static songaliaordering.SongaliaOrdering.cart;
 
-public class ItemOptions
+
+public class ItemOptions extends SongaliaOrdering
 {
-
+    
     private String title;
+    
+    int totalPrice = 0;
+    int totalQuantity = 1;
+    String selectedCategory;
     Color infoColor = new Color(148, 83, 13);
-
+    
     public ItemOptions()
     {
 
@@ -56,7 +61,7 @@ public class ItemOptions
 
     
 
-    public void show(String name,String imageName,int price)
+    public void show(String name,String imageName,Map<String,Integer> categories)
     {
         Color itemBg = new Color(227, 196, 120);
         
@@ -65,9 +70,18 @@ public class ItemOptions
         UI.put("Panel.background", itemBg);
         UI.put("Spinner.background", itemBg );
         
+        
         int width = 300;
         int height = 300;
         Object[] options = {};
+        
+        String[] categoryNames = new String[categories.size()];
+        
+        int categoryIndex = 0;
+        for (String i : categories.keySet()) {
+            categoryNames[categoryIndex] = i;
+            categoryIndex++;
+        }
 
 
         JPanel b = new JPanel(new BorderLayout(5, 5));
@@ -107,33 +121,63 @@ public class ItemOptions
         itemPrice.setLayout(new FlowLayout(FlowLayout.RIGHT));
         itemPrice.setBackground(null);
         
-        JLabel priceLabel = new JLabel("₱" + String.valueOf(price));
+        JLabel priceLabel = new JLabel("₱" + String.valueOf(this.totalPrice * totalQuantity));
         priceLabel.setFont(new Font("Arial", Font.BOLD, 18));
         priceLabel.setForeground(new Color(17, 163, 20));
         itemPrice.add(priceLabel);
-        
-        
         
         JPanel categoryPanel = new JPanel(new BorderLayout());
         categoryPanel.setBackground(null);
         JLabel categoryLabel = new JLabel("Category");
         categoryLabel.setFont(new Font("Arial", Font.BOLD, 10));
         categoryLabel.setForeground(infoColor);
-        String[] categories = { "Extra Large", "Large", "Regular","Small" };
-        JComboBox categoryList = new JComboBox(categories);
+        
+        JComboBox categoryList = new JComboBox(categoryNames);
         categoryList.setFont(new Font("Arial", Font.BOLD, 14));
         categoryList.setBackground(null);
+        categoryList.addActionListener (new ActionListener () {
+            public void actionPerformed(ActionEvent e) {
+                String currentCategory = String.valueOf(categoryList.getSelectedItem());
+                totalPrice = categories.get(currentCategory);
+                selectedCategory = currentCategory;
+                int newTotal = totalPrice * totalQuantity;
+                totalPrice = newTotal;
+                priceLabel.setText("₱" + String.valueOf(newTotal));
+            }
+        });
+        categoryList.setSelectedIndex(1);
+        
         categoryPanel.add(categoryLabel,BorderLayout.PAGE_START);
         categoryPanel.add(categoryList,BorderLayout.CENTER);
         
         
         JPanel quantityPanel = new JPanel(new BorderLayout());
-        quantityPanel.setBackground(null);
-        JSpinner quantity = new JSpinner();
+        quantityPanel.setBackground(null);  
+
         
-        quantity.setValue(1);
+        final JSpinner quantity = new JSpinner();
+        quantity.setValue(this.totalQuantity);
         quantity.getEditor().getComponent(0).setBackground(null);
         quantity.setFont(new Font("Arial", Font.BOLD, 14));
+        JComponent comp = quantity.getEditor();
+        JFormattedTextField field = (JFormattedTextField) comp.getComponent(0);
+        DefaultFormatter formatter = (DefaultFormatter) field.getFormatter();
+        formatter.setCommitsOnValidEdit(true);
+        quantity.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                int newQuantity = Integer.valueOf(String.valueOf(quantity.getValue()));
+                String currentCategory = String.valueOf(categoryList.getSelectedItem());
+                if(newQuantity < 1)newQuantity = 1;
+                totalPrice = categories.get(currentCategory);
+                quantity.setValue(newQuantity);
+                totalQuantity = newQuantity;
+                int newTotal = totalPrice * totalQuantity;
+                totalPrice = newTotal;
+                priceLabel.setText("₱" + String.valueOf(newTotal ));
+            }
+        });
+        
         
         JLabel quantityLabel = new JLabel("Quantity");
         quantityLabel.setFont(new Font("Arial", Font.BOLD, 10));
@@ -150,6 +194,14 @@ public class ItemOptions
         addPurchase.setCursor(new Cursor(Cursor.HAND_CURSOR));
         addPanel.add(addPurchase,BorderLayout.CENTER);
         addPurchase.setBackground(BASE_COLOR);
+        
+        addPurchase.addActionListener(new ActionListener() { 
+            public void actionPerformed(ActionEvent e) { 
+               addcartItem(name, imageName, totalPrice, totalQuantity, selectedCategory);
+                Window w = SwingUtilities.getWindowAncestor(addPurchase);
+                if (w != null) w.setVisible(false); 
+            } 
+          } );
         
         JPanel cancelPanel = new JPanel(new BorderLayout());
         addPanel.setBackground(null);
